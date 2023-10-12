@@ -28,8 +28,8 @@ For instance, in the example above, `["piano", "and", "reading", "books"]` token
 ### Key observations that pave the path towards improved speedup
 Performance of the original speculative decoding algorithm depends heavily on one or a set of reliable draft models. In practice, open-domain draft models has poor speculation accuracy. Furthermode, it's hard to predict query distributions and prepare specialized draft models offline to ensure speculation accuracy. To address the eixsiting challenges and seek new ways to improve speculative decoding in real LLM serving systems, we first present several interesting observations and then introduce our solution:
 <p align="center">
-<img src="images/analysis_c.png" alt="Architecture" width="150">         
-<img src="images/analysis_k.png" alt="Architecture" width="150">
+<img src="images/analysis_c.png" alt="Architecture" width="200">         
+<img src="images/analysis_k.png" alt="Architecture" width="200">
 </p>
 <p align="center">c: the time ratio for a single run between the draft and target model. k: number of proposed tokens each step. Alpha: token acceptance rate.</p>
 
