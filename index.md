@@ -62,7 +62,7 @@ We also compared our results to those from a static setting. To ensure the draft
 
 
 **Arena dataset**:
-<p align="center"><img src="images/arena_language.png" alt="Architecture" width="300"> <img src="arena_class.png" alt="Architecture" width="300"></p>
+<p align="center"><img src="images/arena_language.png" alt="Architecture" width="300"> <img src="images/arena_class.png" alt="Architecture" width="300"></p>
 
 We evaluate OSD on real LMSYS-chat conversations that span 4 months.
 First, we categorize conversations based on the language and we focus on conversations among the top five languages, excluding English. For every chosen language, we use an independent LLaMA-160M to serve as our draft model. All draft models share the same Vicuna-7B as the target model. The token acceptance rate, averaged over the latest 100 requests, reveals that OSD's enhances rates by 0.1 to 0.2, even with under 2K data points.
