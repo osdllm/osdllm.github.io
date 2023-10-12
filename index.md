@@ -1,7 +1,7 @@
 LLMs (Language Models) are at the forefront of revolutionizing contemporary applications and a growing number of companies are seeking to deploy LLMs. Nonetheless, a pivotal factor that demands careful attention during deployment is latency.
 Current generation systems exhibit high latency, much of which can be attributed to the auto-regressive nature of the generation process. This necessitates generating tokens sequentially, where each forward pass of the model produces just one token. 
 
-<p align="center"><img src="_img/spec0.png" alt="Example-1" width="700"></p>
+<p align="center"><img src="images/spec0.png" alt="Example-1" width="700"></p>
 <p align="center">Auto-regressive nature of token generation: one token is generated each time.</p>
 
 To generate each token, there's a need to transfer the model weights from HBM (High Bandwidth Memory) to SRAM (Static Random Access Memory) and access the key-value cache of all previously generated tokens. For LLMs with billions of parameters, this procedure places a substantial demand on memory bandwidth, subsequently resulting in the suboptimal utilization of the GPU.
@@ -12,11 +12,11 @@ In the following sections, we'll first introduce speculative decoding, a techniq
 Specualtive decoding is first introduced by [this paper](https://arxiv.org/abs/2211.17192). Put simply, speculative decoding recognizes that some tokens are straightforward to generate, while others are more challenging. To address this, we can utilize a streamlined 'draft' model for the easier tokens and a more comprehensive 'target' model for the complex ones.
 Specifically, to ensure that speculative decoding produces identical output to the original generation method, the draft model proposes tokens which are then validated by the target model.
 
-<p align="center"><img src="_img/spec1.png" alt="Example-1" width="700"></p>
+<p align="center"><img src="images/spec1.png" alt="Example-1" width="700"></p>
 
 As shown in the picture above, the draft model proposes five tokens: `["I", "like", "cooking", "and", "traveling"]`. These are then forwarded to the target model for parallel verification. In this example, the third token, `cooking` (should be  `playing`), was proposed inaccurately. As a result, only the first three tokens, `["I", "like", "playing"]`, are generated in this step.
 
-<p align="center"><img src="_img/spec2.png" alt="Example-2" width="800"></p>
+<p align="center"><img src="images/spec2.png" alt="Example-2" width="800"></p>
 
 For the second step, starting from the `playing` token, the draft model proposes a new set of tokens: `["piano", "and", "reading", "books"]`. Let's assume, fortunately, that all these tokens are accurately proposed and subsequently confirmed by the larger model. Additionally, the larger model produces an extra token, `<EOS>`, based on the last verified token `.`. The generation process concludes at this point since the end-of-string token (`<EOS>`) has been produced.
 
@@ -28,8 +28,8 @@ For instance, in the example above, `["piano", "and", "reading", "books"]` token
 ### Key observations that pave the path towards improved speedup
 Performance of the original speculative decoding algorithm depends heavily on one or a set of reliable draft models. In practice, open-domain draft models has poor speculation accuracy. Furthermode, it's hard to predict query distributions and prepare specialized draft models offline to ensure speculation accuracy. To address the eixsiting challenges and seek new ways to improve speculative decoding in real LLM serving systems, we first present several interesting observations and then introduce our solution:
 <p align="center">
-<img src="_img/analysis_c.png" alt="Architecture" width="150">         
-<img src="_img/analysis_k.png" alt="Architecture" width="150">
+<img src="images/analysis_c.png" alt="Architecture" width="150">         
+<img src="images/analysis_k.png" alt="Architecture" width="150">
 </p>
 <p align="center">c: the time ratio for a single run between the draft and target model. k: number of proposed tokens each step. Alpha: token acceptance rate.</p>
 
@@ -41,7 +41,7 @@ These spare FLOPs represent latent computational power, which can be harnessed f
 
 ### OSD architecture
 Based on the observations above, we propose the online speculative decoding (OSD) algorithm to speedup LLM inference:
-<p align="center"><img src="_img/arch.png" alt="Architecture" width="800"></p>
+<p align="center"><img src="images/arch.png" alt="Architecture" width="800"></p>
 
 For each prompt, the draft model suggests multiple tokens in a single step. The target model then verifies these tokens, accepting some and rejecting others. If the student proposes incorrect tokens, both the draft and target distributions are stored in a buffer. Once the buffer exceeds a specified threshold, the draft model is updated by calculating the loss between the draft and target distributions using various distance metrics. Overall, OSD continuously improves the draft model’s approximation (indicated by increased token acceptance rate $\alpha$) by learning from the target model during the serving phase. 
 
@@ -50,19 +50,19 @@ For each prompt, the draft model suggests multiple tokens in a single step. The 
 
 In this experiment, we pick [LLaMA-160M](https://huggingface.co/JackFram/llama-160m) as the draft model and [Vicuna-7B](https://huggingface.co/lmsys/vicuna-7b-v1.3) as the target model. In the beginning, online speculative decoding yields a lower token acceptance rate in comparison to the offline distilled model. Nevertheless, these acceptance rates rise swiftly as the draft model is exposed to more data. We also annotate the token acceptance rate from the offline setting to highlight the potential peak performance that the online serving system could reach.
 <p align="center">
-<img src="_img/legend_figure1.png" alt="Online Learning" width="600"><br>
-<img src="_img/online.png" alt="Online Learning" width="300"></p>
+<img src="images/legend_figure1.png" alt="Online Learning" width="600"><br>
+<img src="images/online.png" alt="Online Learning" width="300"></p>
 <p align="center">The x-axis represents the number of records that OSD has processed. Alpha is averaged over the most recent 50 records.</p>
 
 **Distribution shift**:
 In this experiment, we want to know how quickly can OSD adapt to distribution shift. As shown below, OSD's alpha value dips notably at distribution boundaries (around 2K, 4K, and 6K records). This is anticipated since the draft model initially struggles when faced with a new distribution. However, the alpha value rebounds quickly as OSD processes more data, highlighting its adaptability to shifting query distributions. 
-<p align="center"><img src="_img/shift.png" alt="Distribution Shift" width="600"></p>
+<p align="center"><img src="images/shift.png" alt="Distribution Shift" width="600"></p>
 
 We also compared our results to those from a static setting. To ensure the draft model wasn't just memorizing data, we chose samples distinct from the online evaluation data. These samples correspond to 30%, 50%, 70%, and 100% of each dataset's online evaluation volume, at 0.6K, 1K, 1.4K, and 2K quantities respectively. As depicted, upon an initial shift in query distribution, OSD's performance aligns with or slightly trails the distillation with 30% data. However, it quickly catches up, matching or even surpassing performances seen with 70% to 100% data access. This highlights OSD's ability to rival models fully exposed to the query distribution, even without intimate knowledge of the underlying query dynamics.
 
 
 **Arena dataset**:
-<p align="center"><img src="_img/arena_language.png" alt="Architecture" width="300"> <img src="arena_class.png" alt="Architecture" width="300"></p>
+<p align="center"><img src="images/arena_language.png" alt="Architecture" width="300"> <img src="arena_class.png" alt="Architecture" width="300"></p>
 
 We evaluate OSD on real LMSYS-chat conversations that span 4 months.
 First, we categorize conversations based on the language and we focus on conversations among the top five languages, excluding English. For every chosen language, we use an independent LLaMA-160M to serve as our draft model. All draft models share the same Vicuna-7B as the target model. The token acceptance rate, averaged over the latest 100 requests, reveals that OSD's enhances rates by 0.1 to 0.2, even with under 2K data points.
